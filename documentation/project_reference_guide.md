@@ -1,132 +1,259 @@
-# ShopFlow: AI-Powered Customer Intelligence & Predictive Personalization
+# Project Reference Guide
 
-**Industry / Sector:** E-commerce | Retail Tech | Predictive Analytics  
-**Duration:** 2 Weeks  
-**Team Composition:** Project Managers + Data Scientists
+**ShopFlow Customer Intelligence Platform — 2-Week Sprint**  
+**Project:** ShopFlow by PrimeCart Inc.  
+**Audience:** All team members — PM and DS  
+**Purpose:** Single reference for project specifications, data environment, model targets, tools, and API details. The **DS Coordination Guide** and **PM Coordination Guide** are the operational documents for day-to-day work. This document is the spec sheet both guides point to.
+
+**Repository Path:** `documentation/project_reference_guide.md`  
+**Last Updated:** February 2026
 
 ---
 
-## 1. Company Overview
-ShopFlow by PrimeCart Inc. is a London-based retail technology leader founded in 2018. The company's mission is to transform the UK and European e-commerce landscape through intelligent, data-driven customer experiences. While ShopFlow operates as a dynamic marketplace for fashion and electronics across major cities like London, Manchester, and Berlin, it has evolved into a pioneer of predictive analytics. With over 500,000 active monthly customers, ShopFlow leverages machine learning to anticipate customer needs, optimize stock availability, and maximize retention in a highly competitive market.
+## 1. Project Team Organization
 
-## 2. Business Challenge
-*   **High Monthly Churn:** 15% monthly churn rate leading to a £2M annual revenue loss.
-*   **Cart Abandonment:** 68% of customers abandon purchases before completion (£800K missed revenue).
-*   **Ineffective Personalization:** Static recommendations resulting in a low 2% click-through rate.
-*   **Operational Inefficiency:** 20% stockout and 30% overstock rates due to manual inventory planning.
-*   **Fragmented Data:** Customer interactions and transaction records exist in siloed systems.
-*   **Reactive Strategy:** Lack of predictive capability to identify at-risk customers before they leave.
+### Team Structure Overview
 
-## 3. Rationale for the Project
-Customer retention and personalization are the primary drivers of profitability in the British e-commerce sector. Transitioning from reactive engagement to predictive intelligence allows ShopFlow to recover lost revenue and improve the efficiency of marketing and supply chain operations.
+| Team          | Focus Area             | Members | Key Responsibilities                                          |
+| :------------ | :--------------------- | :------ | :------------------------------------------------------------ |
+| **PM Lead**   | Overall Coordination   | 1       | Sprint planning, stakeholder management, cross-team alignment |
+| **PM Team 1** | Technical Delivery     | 3-4     | Environment setup, Render deployment support, API integration |
+| **PM Team 2** | Business Delivery      | 3-4     | Stakeholder comms, KPI tracking, business impact translation  |
+| **PM Team 3** | QA & Documentation     | 3-4     | Model validation, API testing, documentation, demo prep       |
+| **DS Lead**   | Technical Architecture | 1       | Model strategy, technical decisions, code review              |
+| **DS Team 1** | Churn Prediction       | 3-4     | EDA, churn model development, FastAPI deployment              |
+| **DS Team 2** | Recommendations        | 3-4     | Collaborative filtering, recommendation API                   |
+| **DS Team 3** | Dashboard & MLOps      | 3-4     | Streamlit dashboard, experiment tracking, model registry      |
 
-**This 2-week sprint focuses on:**
-*   **Predictive Modeling:** Building a production-ready churn prediction model.
-*   **Basic Personalization:** Implementing simplified recommendation logic.
-*   **Proof of Concept Dashboard:** Creating a functional Streamlit prototype.
-*   **Foundation for Scale:** Establishing patterns for future full deployment.
+**Total Team Size:** ~10 PMs + ~10 Data Scientists (flexible based on availability)  
+**Note:** This model focuses on local development and deployment, with data infrastructure pre-provisioned for rapid prototyping.
 
-## 4. Project Objectives (2-Week Scope)
-**Core Deliverables:**
-*   **Churn Prediction Model:** Train and validate a binary classification model (Target: AUC > 0.75).
-*   **Basic Recommendation Engine:** Rule-based + collaborative filtering prototype.
-*   **Single FastAPI Endpoint:** Deploy churn prediction API with <300ms latency.
-*   **Streamlit Dashboard:** Interactive prototype showing model predictions and key metrics.
-*   **Documentation Package:** Model cards, API specs, and deployment guide.
+---
 
-## 5. Dataset
-**Core Tables:**
-*   `customers`: 100,000+ records (IDs, demographics, signup dates, total spend).
-*   `orders`: 500,000+ records (transactional data, amount, payment methods).
-*   `products`: 5,000+ items (categories, brands).
-*   `events`: 2,000,000+ web logs (sessions, clicks, timestamps) - Sampled to 500K for speed.
+## 2. Infrastructure & Technical Architecture
 
-**Feature Engineering Focus:**
-*   RFM (Recency, Frequency, Monetary) metrics.
-*   Session-based behavioral features.
-*   Purchase patterns and category preferences.
+### Architecture Overview
 
-## 6. Technology Stack
-| Category | Tools / Services |
-| :--- | :--- |
-| **Project Management** | Jira, Confluence, GitHub |
-| **Cloud / Infrastructure** | AWS S3 (Data Lake), AWS Lambda/EC2 |
-| **Data Processing** | Python (Pandas, NumPy), dbt |
-| **Machine Learning** | scikit-learn, XGBoost, Random Forest |
-| **API Development** | FastAPI, Streamlit |
-| **Visualization** | Seaborn, Plotly, Streamlit |
-| **Environment** | Local development + Docker containers (Week 1), AWS deployment (Week 2) |
+The architecture is designed for **local development and prototyping**. Data is pre-provisioned, allowing DS teams to focus on modeling.
 
-**Model Selection:**
-*   **Churn Prediction:** XGBoost/Random Forest (binary classification).
-*   **Recommendations:** Collaborative filtering (item-item similarity).
+### Data Science Workflow
 
-## 7. 2-Week Project Plan
+1.  **Data Access:** DS teams pull directly from **AWS S3 Curated Layer** with pre-cleaned core tables
+2.  **Exploration:** Use Jupyter Notebooks for EDA on raw tables (`customers`, `orders`, `products`, `events`)
+3.  **Feature Engineering:** Build your own feature sets through custom engineering - **do not use pre-computed `ml_features` table**
+4.  **Model Development:** Train models using your engineered features (scikit-learn/XGBoost)
+5.  **MLOps:** Track experiments and register models using **MLflow** or **Weights & Biases**
+6.  **API Development:** Wrap models in **FastAPI**, test locally with **ngrok**, deploy to **Render** for production
+7.  **Dashboard:** Build **Streamlit Dashboard** consuming both S3 data and local API predictions
 
-### Team Structure
-*   **PM Lead (1):** Overall coordination, stakeholder management.
-*   **PMs (~10):** Technical Delivery, Business Delivery, QA & Documentation.
-*   **DS Lead (1):** Technical architecture and model strategy.
-*   **Data Scientists (~10):** Churn Modeling, Recommendation Engine, Dashboard/Integration.
+---
 
-### Week 1: Foundation & Build
+## 3. Data Science (DS) Technical Scope
 
-**Days 1-2: Setup & Exploration**
-*   **PM:** Define charter/metrics, setup Jira/Confluence, risk register, standups, access credentials.
-*   **DS:** Setup env/pipelines, load/validate data, EDA, baseline metrics dashboard.
-*   *Key Deliverable:* EDA report with data quality assessment.
+### 3.1 Provided Data Environment
 
-**Days 3-5: Feature Engineering & Baseline Models**
-*   **PM:** Track features, manage dependencies, document decisions, midweek status.
-*   **DS:** Engineer RFM/behavioral features, baseline churn model (Logistic Regression), train/test splits.
-*   *Key Deliverable:* Feature dataset ready for modeling; Baseline model metrics.
+DS teams start with raw curated tables. You will build your own features through feature engineering.
 
-### Week 2: Build, Deploy & Finalize
+**Star Schema Access:**
 
-**Days 6-8: Model Optimization & API Development**
-*   **PM:** Monitor metrics, coordinate API timeline, review docs, prepare demo env.
-*   **DS:** Train XGBoost (tuned), build Rec engine, develop FastAPI endpoint, serialize models.
-*   *Key Deliverable:* Trained models + functional API endpoint.
+**Dimension Tables:**
 
-**Days 9-10: Dashboard & Integration**
-*   **PM:** End-to-end QA, verify metrics, document API, final presentation/demo.
-*   **DS:** Build Streamlit dashboard (predictions, recs, feature importance), deploy local Docker, integration test.
-*   *Key Deliverable:* Working Streamlit dashboard + locally deployed API.
+- `dim_customers`: 100,000+ records
+  - **Fields:** customer_id, signup_date, demographics, loyalty_tier
+- `dim_products`: 5,000+ items
+  - **Fields:** product_id, category, brand, price, margin
 
-## 8. PM Governance & Quality Assurance
-**PM Sub-Team Structure:**
-*   **Team 1 (Technical Delivery):** Local env, tracking, API/Docker support.
-*   **Team 2 (Business Delivery):** Stakeholder comms, KPIs, ROI analysis.
-*   **Team 3 (QA & Documentation):** Validation, stress testing, documentation, demo prep.
+**Fact Tables:**
 
-**Daily Syncs:**
-*   Morning (15m): DS technical blockers, PM alignment.
-*   End-of-Day (10m): Progress vs goals, risk flagging.
+- `fact_orders`: 500,000+ transactions
+  - **Fields:** order_id, customer_id, product_id, amount, timestamp, payment_method
+- `fact_events`: 2,000,000+ web interactions (sampled to 500K for 2-week sprint)
+  - **Fields:** event_id, customer_id, session_id, event_type, timestamp, device
 
-## 9. Technical Challenges & Mitigation
-| Challenge | 2-Week Solution |
-| :--- | :--- |
-| Time Constraints | Focus on single high-impact model (churn). |
-| AWS Complexity | Use local Docker deployment. |
-| Data Volume | Sample events data to 500K records. |
-| Class Imbalance | SMOTE or class weighting. |
-| Feature Engineering | Limit to RFM + 5-10 behavioral features. |
+**Feature Engineering Expectations:**
+You must build your own features, including:
 
-## 10. Success Metrics
-*   **Churn Model:** AUC > 0.75, Balanced F1 > 0.70.
-*   **API Performance:** Latency < 300ms.
-*   **Dashboard:** Real-time predictions working, functional prototype.
+- **Transactional Features (to engineer):**
+  - Recency: Days since last purchase
+  - Frequency: Number of orders
+  - Monetary: Total spend
+  - Tenure: Days since signup
+  - Average order value
+- **Behavioral Features (to engineer):**
+  - Session counts and patterns
+  - Cart abandonment rates
+  - Category diversity
+  - Device preferences
+  - Purchase velocity
 
-## 11. Deliverables
-*   **PM:** Charter, Risk Register, Status Reports, Retrospective, Final Deck, Jira Report.
-*   **DS:** Trained models (.pkl), FastAPI code, Streamlit code, Perf report.
-*   **Docs:** API specs (Swagger), Model card, Deployment guide.
+**Note:** There is **NO** pre-computed `ml_features` table. Feature engineering is a core deliverable of this sprint.
 
-## 12. Learning Outcomes
-*   **PMs:** Agile ML management, risk/scope management, technical coordination.
-*   **DS:** Rapid MVP, End-to-end ML workflow, FastAPI/Streamlit, time-constrained optimization.
+### 3.2 Model Requirements & API Specifications
 
-## 14. Assessment & Evaluation
-*   **Technical:** Model performance (holdout), API stress test, Dashboard usability.
-*   **Business:** Objective alignment, ROI projection.
-*   **Process:** Retrospective, Velocity, Documentation quality.
+| Model                | Goal                             | Target Metric              | API Endpoint                   | Response Time |
+| :------------------- | :------------------------------- | :------------------------- | :----------------------------- | :------------ |
+| **Churn Prediction** | Predict 90-day churn probability | AUC > 0.75, F1 > 0.70      | `POST /predict/churn`          | < 300ms       |
+| **Recommendation**   | Top-5 product suggestions        | Relevance score functional | `GET /recommend/{customer_id}` | < 300ms       |
+
+**MLOps Requirements:**
+
+- **Experiment Tracking** (using MLflow or Weights & Biases):
+  - Log all training runs with hyperparameters
+  - Track metrics across experiments (accuracy, AUC, F1, precision, recall)
+  - Compare model versions
+  - Store training artifacts
+- **Model Registry:**
+  - Register trained models with versioning (v1.0, v1.1, etc.)
+  - Include model metadata (training date, features used, performance metrics)
+  - Track model lineage and dependencies
+  - Enable model rollback if needed
+
+**API Request/Response Formats:**
+
+**Churn Prediction Endpoint:**
+
+- **Method:** `POST /predict/churn`
+- **Request includes:** `customer_id`, features (recency, frequency, monetary, tenure, etc.)
+- **Response includes:** `customer_id`, `churn_probability`, `churn_prediction` (high_risk/low_risk), `confidence`, `model_version`, `timestamp`
+
+**Recommendation Endpoint:**
+
+- **Method:** `GET /recommend/{customer_id}?n=5`
+- **Response includes:** `customer_id`, list of recommendations (`product_id`, `product_name`, `category`, `predicted_score`, `reason`), `model_version`, `timestamp`
+
+---
+
+## 4. Project Management (PM) Governance
+
+### 4.1 Sprint Lifecycle (2-Week Timeline)
+
+**Week 1: Foundation & Build**
+
+- **PM Team 1 (Technical Delivery):**
+  - Ensure data access credentials and S3 permissions configured
+  - Set up local Docker development environment
+  - Set up MLOps tools (MLflow or Weights & Biases)
+  - Track model development progress in Jira
+  - Prepare local infrastructure for API deployment
+- **PM Team 2 (Business Delivery):**
+  - Validate feature selection aligns with business KPIs
+  - Document stakeholder requirements
+  - Begin drafting success metrics framework
+  - Prepare mid-sprint stakeholder update
+- **PM Team 3 (QA & Documentation):**
+  - Review EDA findings for data quality issues
+  - Begin drafting API documentation templates
+  - Set up testing environments
+- **DS Teams:**
+  - Focus on feature selection and baseline models
+  - Conduct EDA and statistical validation
+  - Begin model training iterations
+
+**Week 2: Integrate, Deploy & Finalize**
+
+- **PM Team 1 (Technical Delivery):**
+  - Assist DS teams with local Docker deployment
+  - Validate API integration points
+  - Monitor local deployment and API latency
+  - Coordinate final integration testing
+- **PM Team 2 (Business Delivery):**
+  - Align model performance with business outcomes
+  - Prepare final presentation and ROI analysis
+  - Coordinate stakeholder demo
+  - Document business impact metrics
+- **PM Team 3 (QA & Documentation):**
+  - Independently verify model metrics before production sign-off
+  - Conduct API stress testing (target: 100 concurrent requests)
+  - Finalize all documentation (API specs, model cards, deployment guides)
+  - Prepare demo environment and materials
+- **DS Teams:**
+  - Finalize model training and validation
+  - Deploy FastAPI endpoints locally via Docker
+  - Implement MLOps: experiment tracking and model registry
+  - Build and test Streamlit dashboard
+  - Conduct end-to-end integration testing
+
+### 4.2 Quality Assurance (PM Team 3 Checklist)
+
+**API Validation:**
+
+- [ ] Endpoints return valid JSON predictions
+- [ ] Response time < 300ms (average across 100 requests)
+- [ ] Error handling covers edge cases (missing features, invalid IDs)
+- [ ] API documentation (Swagger/OpenAPI) is complete and accurate
+
+**Model Accuracy Audit:**
+
+- [ ] Independently verify Precision/Recall on test set
+- [ ] Confirm AUC scores meet targets (Churn: > 0.75)
+- [ ] Review confusion matrices for class imbalance handling
+- [ ] Validate feature importance rankings are business-logical
+
+**Dashboard Validation:**
+
+- [ ] All visualizations render correctly
+- [ ] Real-time predictions display without lag
+- [ ] Filters and controls function as expected
+- [ ] Dashboard loads in < 5 seconds
+
+**Documentation Review:**
+
+- [ ] Model cards include methodology, features, performance
+- [ ] API documentation tested with sample requests
+- [ ] Deployment guide enables reproducible setup
+- [ ] Data dictionary covers all features used
+
+---
+
+## 5. Communication & Success Criteria
+
+### 5.1 Daily Communication Protocol
+
+**Morning Standup (15 min) - 9:00 AM**
+
+- **Agenda:**
+  - DS Updates: Model iterations, metric improvements, technical blockers
+  - PM Updates: Infrastructure status, stakeholder feedback, dependency management
+  - Alignment: Quick wins, priority adjustments, resource needs
+- **Format:**
+  - What was completed yesterday?
+  - What's planned for today?
+  - Any blockers or dependencies?
+
+**End-of-Day Sync (10 min) - 5:00 PM**
+
+- **Agenda:**
+  - Review progress against sprint goals
+  - Update Jira board and burn-down chart
+  - Flag risks for next-day resolution
+  - Celebrate small wins
+
+---
+
+## 6. Tools & Platforms Reference
+
+**Project Management:**
+
+- **Jira:** Sprint planning, task tracking, velocity monitoring
+- **Confluence:** Documentation, decision logs, knowledge base
+- **Slack/Teams:** Real-time team communication
+- **GitHub:** Code repository, version control, pull requests
+
+**Development:**
+
+- **Jupyter Notebooks:** EDA, model experimentation
+- **VS Code / PyCharm:** IDE for Python development
+- **Docker Desktop:** Local containerization and testing
+- **Postman:** API endpoint testing
+
+**AWS Services (Read-Only Access):**
+
+- **S3:** Data lake for reading curated tables
+- **IAM:** Access credentials for S3
+- **Note:** No AWS deployment required - all work is local via Docker
+
+**Data Science:**
+
+- **Python 3.9+**
+- **Libraries:** `pandas`, `numpy`, `scikit-learn`, `xgboost`, `fastapi`, `streamlit`, `plotly`
+- **MLOps:** **MLflow** or **Weights & Biases** for experiment tracking and model registry.

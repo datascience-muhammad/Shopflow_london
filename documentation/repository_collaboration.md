@@ -64,3 +64,11 @@ git checkout -b feature/model-training-v1
 - **Notebooks:** Clear outputs before committing `.ipynb` files to reduce bloat.
 - **Large Files:** Do not commit CSVs or models larger than 100MB. Use S3 or included `.gitignore`.
 - **Sync:** Pull from upstream `dev` frequently to avoid large merge conflicts later.
+
+## 4. Shared Resource Rules (Contracts & Feature Store)
+
+For `data_science/contracts/` and `data_science/feature_store/`:
+
+1.  **Always pull from `dev`** before writing to these directories.
+2.  **No force pushes.**
+3.  **Coordinate** updates to `feature_store/README.md` in Slack/WhatsApp to avoid race conditions.
