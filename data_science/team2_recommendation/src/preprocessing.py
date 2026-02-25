@@ -11,42 +11,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# ============================================================
-# STEP 1: Load raw data from S3
-# ============================================================
 def load_raw_data():
     """Load all raw datasets using the data_loader utility."""
     from data_loader import get_s3_data
-    
+
     customers = get_s3_data('customers')
     products = get_s3_data('products')
     orders = get_s3_data('orders')
     events = get_s3_data('events')
-    
+
     return customers, products, orders, events
 
 
-# ============================================================
-# STEP 2: Build User-Item Interaction Matrix
-# ============================================================
 def build_interaction_matrix(orders, events):
     """
     Combines purchase and browsing data into a weighted interaction matrix.
-    
-    Weights:
-        - view: 1
-        - cart: 2
-        - purchase: 5
-    
+
+    Weights: view=1, cart=2, purchase=5
+
     Returns a DataFrame with columns: customer_id, product_id, implicit_score (0-1 normalized)
     """
-    # Weight mapping for event types
-    event_weights = {
-        'view': 1,
-        'cart': 2,
-        'purchase': 5
-    }
-    
+    event_weights = {'view': 1, 'cart': 2, 'purchase': 5}
+
     # Score from events (views and carts)
     events_scored = events.copy()
     events_scored['weight'] = events_scored['event_type'].map(event_weights).fillna(0)
@@ -57,8 +43,8 @@ def build_interaction_matrix(orders, events):
         .reset_index()
         .rename(columns={'weight': 'event_score'})
     )
-    
-    # Score from orders (purchases = weight 5 per order)
+
+    # Score from orders (each order = purchase weight)
     order_interactions = (
         orders
         .groupby(['customer_id', 'product_id'])
@@ -67,117 +53,93 @@ def build_interaction_matrix(orders, events):
     )
     order_interactions['order_score'] = order_interactions['order_count'] * event_weights['purchase']
     order_interactions = order_interactions[['customer_id', 'product_id', 'order_score']]
-    
+
     # Merge event scores and order scores
     interactions = pd.merge(
         event_interactions, order_interactions,
         on=['customer_id', 'product_id'],
         how='outer'
     ).fillna(0)
-    
+
     # Combined raw score
     interactions['raw_score'] = interactions['event_score'] + interactions['order_score']
-    
+
     # Normalize to [0, 1] range (contract requirement: predicted_score 0.0-1.0)
     max_score = interactions['raw_score'].max()
     if max_score > 0:
         interactions['implicit_score'] = interactions['raw_score'] / max_score
     else:
         interactions['implicit_score'] = 0.0
-    
+
     return interactions[['customer_id', 'product_id', 'implicit_score', 'raw_score']]
 
 
-# ============================================================
-# STEP 3: Build RFM Features (per customer)
-# ============================================================
 def build_rfm_features(orders):
     """
     Calculates Recency, Frequency, and Monetary values for each customer.
-    
+
     Returns a DataFrame with columns: customer_id, recency_days, frequency, monetary
     """
-    # Ensure timestamp is datetime
     orders = orders.copy()
     orders['timestamp'] = pd.to_datetime(orders['timestamp'])
-    
-    # Reference date (latest order date + 1 day)
+
     reference_date = orders['timestamp'].max() + pd.Timedelta(days=1)
-    
+
     rfm = orders.groupby('customer_id').agg(
         recency_days=('timestamp', lambda x: (reference_date - x.max()).days),
         frequency=('order_id', 'nunique'),
         monetary=('amount', 'sum')
     ).reset_index()
-    
+
     return rfm
 
 
-# ============================================================
-# STEP 4: Build Product Lookup (for API response enrichment)
-# ============================================================
 def build_product_lookup(products):
     """
     Creates a lookup table mapping product_id to product_name and category.
-    This is needed by the API to return full product details per contract.
+    Needed by the API to return full product details per contract.
     """
     lookup = products[['product_id', 'product_name', 'category']].drop_duplicates()
     return lookup
 
 
-# ============================================================
-# STEP 5: Create rec_features.parquet for feature store
-# ============================================================
 def create_feature_store_output(interactions, rfm, product_lookup):
     """
     Merges interaction matrix with RFM and product metadata,
-    then saves as rec_features.parquet for the shared feature store.
+    then returns a combined DataFrame for the shared feature store.
     """
-    # Merge interactions with product metadata
     rec_features = pd.merge(interactions, product_lookup, on='product_id', how='left')
-    
-    # Merge with RFM features
     rec_features = pd.merge(rec_features, rfm, on='customer_id', how='left')
-    
     return rec_features
 
 
-# ============================================================
-# MAIN: Run the full pipeline
-# ============================================================
 if __name__ == "__main__":
-    print("=" * 60)
-    print("DS Team 2: Feature Engineering Pipeline")
-    print("=" * 60)
-    
-    # Step 1: Load data
-    print("\n[1/5] Loading raw data from S3...")
+    # Load data
+    print("Loading raw data from S3...")
     customers, products, orders, events = load_raw_data()
-    
-    # Step 2: Build interaction matrix
-    print("\n[2/5] Building User-Item Interaction Matrix...")
+
+    # Build interaction matrix
+    print("Building User-Item Interaction Matrix...")
     interactions = build_interaction_matrix(orders, events)
-    print(f"  Interactions created: {len(interactions)} rows")
-    print(f"  Unique users: {interactions['customer_id'].nunique()}")
-    print(f"  Unique products: {interactions['product_id'].nunique()}")
+    print(f"  Interactions: {len(interactions)} rows")
+    print(f"  Users: {interactions['customer_id'].nunique()}, Products: {interactions['product_id'].nunique()}")
     print(f"  Score range: {interactions['implicit_score'].min():.4f} - {interactions['implicit_score'].max():.4f}")
-    
-    # Step 3: Build RFM features
-    print("\n[3/5] Building RFM Features...")
+
+    # Build RFM features
+    print("Building RFM Features...")
     rfm = build_rfm_features(orders)
-    print(f"  RFM profiles created: {len(rfm)} customers")
+    print(f"  RFM profiles: {len(rfm)} customers")
     print(rfm.describe())
-    
-    # Step 4: Build product lookup
-    print("\n[4/5] Building Product Lookup Table...")
+
+    # Build product lookup
+    print("Building Product Lookup Table...")
     product_lookup = build_product_lookup(products)
     print(f"  Products in lookup: {len(product_lookup)}")
-    
-    # Step 5: Create feature store output
-    print("\n[5/5] Creating rec_features.parquet...")
+
+    # Create and save feature store output
+    print("Creating rec_features.parquet...")
     rec_features = create_feature_store_output(interactions, rfm, product_lookup)
-    
-    # Save to feature store
+
     output_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
         'feature_store', 'rec_features.parquet'
@@ -186,7 +148,4 @@ if __name__ == "__main__":
     print(f"  Saved to: {output_path}")
     print(f"  Total rows: {len(rec_features)}")
     print(f"  Columns: {list(rec_features.columns)}")
-    
-    print("\n" + "=" * 60)
-    print("Feature Engineering Complete!")
-    print("=" * 60)
+    print("Done.")
