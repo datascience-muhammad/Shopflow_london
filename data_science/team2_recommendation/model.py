@@ -2,9 +2,9 @@ import pickle
 import numpy as np
 import pandas as pd
 import datetime
-from pathlib import Path
 import os
 import mlflow
+import scipy.sparse as sp
 
 
 # ── Load model bundle ────────────────────────────────────────────────────────
@@ -18,46 +18,43 @@ mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
 # Load model bundle from MLflow registry
 bundle = mlflow.sklearn.load_model("models:/recommendation-model/1")
 
-svd                     = bundle["svd"]
-customer_factors        = bundle["customer_factors"]
-item_factors            = bundle["item_factors"]
-customer_product_matrix = bundle["customer_product_matrix"]
-products_raw            = bundle["products_raw"]
+svd              = bundle["svd"]
+customer_factors = bundle["customer_factors"]
+item_factors     = bundle["item_factors"]
+customer_index   = bundle["customer_index"]
+product_index    = bundle["product_index"]
+products_raw     = bundle["products_raw"]
+sparse_matrix    = bundle["customer_product_matrix"]  # scipy sparse matrix
 
 MODEL_VERSION = "rec-model-svd-v1.0"
-
 
 
 # ── Recommendation function ──────────────────────────────────────────────────
 def get_recommendations(customer_id: str, n: int = 5) -> dict:
     """
     Returns top-n recommendations for a given customer_id.
-    Raises ValueError for unknown customers.
+    Raises KeyError for unknown customers.
     """
 
     # 404 — customer not in matrix
-    if customer_id not in customer_product_matrix.index:
+    if customer_id not in customer_index:
         raise KeyError(f"Customer '{customer_id}' not found.")
 
     # Get customer latent vector
-    customer_idx    = customer_product_matrix.index.get_loc(customer_id)
+    customer_idx    = customer_index.index(customer_id)
     customer_vector = customer_factors[customer_idx]
 
     # Score all items
     scores = np.dot(item_factors, customer_vector)
 
     # Zero out already-interacted products
-    customer_row       = customer_product_matrix.loc[customer_id]
-    interacted_products = customer_row[customer_row > 0].index.tolist()
-    interacted_idx = [
-        customer_product_matrix.columns.get_loc(p)
-        for p in interacted_products
-    ]
+    customer_row   = sparse_matrix.getrow(customer_idx)
+    interacted_idx = customer_row.nonzero()[1].tolist()
     scores[interacted_idx] = 0
 
     # Top n indices
     top_indices  = np.argsort(scores)[::-1][:n]
-    top_products = customer_product_matrix.columns[top_indices]
+    top_products = [product_index[i] for i in top_indices]
     top_scores   = scores[top_indices]
 
     # Normalise to 0-1
