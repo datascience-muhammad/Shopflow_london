@@ -5,21 +5,15 @@ import datetime
 from pathlib import Path
 import os
 import mlflow
-import dagshub
 
 
 # ── Load model bundle ────────────────────────────────────────────────────────
 
-# DagsHub/MLflow authentication
-dagshub.init(
-    repo_owner="marynguma6-cmyk",
-    repo_name="shopflow_mlflow",
-    mlflow=True
-)
-
-mlflow.set_tracking_uri(os.environ.get("https://dagshub.com/marynguma6-cmyk/shopflow_mlflow.mlflow"))
+# Set DagsHub credentials
 os.environ["MLFLOW_TRACKING_USERNAME"] = os.environ.get("marynguma6-cmyk")
 os.environ["MLFLOW_TRACKING_PASSWORD"] = os.environ.get("7f2799f184a982d846a92248fb5ea5442ebedea9")
+
+mlflow.set_tracking_uri(os.environ.get("https://dagshub.com/marynguma6-cmyk/shopflow_mlflow.mlflow"))
 
 # Load model bundle from MLflow registry
 bundle = mlflow.sklearn.load_model("models:/recommendation-model/champion")
