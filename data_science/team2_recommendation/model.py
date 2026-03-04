@@ -10,10 +10,10 @@ import mlflow
 # ── Load model bundle ────────────────────────────────────────────────────────
 
 # Set DagsHub credentials
-os.environ["MLFLOW_TRACKING_USERNAME"] = os.environ.get("marynguma6-cmyk")
-os.environ["MLFLOW_TRACKING_PASSWORD"] = os.environ.get("7f2799f184a982d846a92248fb5ea5442ebedea9")
+os.environ["MLFLOW_TRACKING_USERNAME"] = os.environ.get("DAGSHUB_USERNAME")
+os.environ["MLFLOW_TRACKING_PASSWORD"] = os.environ.get("DAGSHUB_TOKEN")
 
-mlflow.set_tracking_uri(os.environ.get("https://dagshub.com/marynguma6-cmyk/shopflow_mlflow.mlflow"))
+mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
 
 # Load model bundle from MLflow registry
 bundle = mlflow.sklearn.load_model("models:/recommendation-model/champion")
