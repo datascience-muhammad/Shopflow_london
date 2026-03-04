@@ -3,20 +3,35 @@ import numpy as np
 import pandas as pd
 import datetime
 from pathlib import Path
+import os
+import mlflow
+import dagshub
+
 
 # ── Load model bundle ────────────────────────────────────────────────────────
-MODEL_PATH = Path(__file__).parent / "models" / "artifacts" / "rec_model_svd_v1.pkl"
 
-with open(MODEL_PATH, "rb") as f:
-    bundle = pickle.load(f)
+# DagsHub/MLflow authentication
+dagshub.init(
+    repo_owner="marynguma6-cmyk",
+    repo_name="shopflow_mlflow",
+    mlflow=True
+)
 
-svd                    = bundle["svd"]
-customer_factors       = bundle["customer_factors"]
-item_factors           = bundle["item_factors"]
+mlflow.set_tracking_uri(os.environ.get("https://dagshub.com/marynguma6-cmyk/shopflow_mlflow.mlflow"))
+os.environ["MLFLOW_TRACKING_USERNAME"] = os.environ.get("marynguma6-cmyk")
+os.environ["MLFLOW_TRACKING_PASSWORD"] = os.environ.get("7f2799f184a982d846a92248fb5ea5442ebedea9")
+
+# Load model bundle from MLflow registry
+bundle = mlflow.sklearn.load_model("models:/recommendation-model/champion")
+
+svd                     = bundle["svd"]
+customer_factors        = bundle["customer_factors"]
+item_factors            = bundle["item_factors"]
 customer_product_matrix = bundle["customer_product_matrix"]
-products_raw           = bundle["products_raw"]
+products_raw            = bundle["products_raw"]
 
 MODEL_VERSION = "rec-model-svd-v1.0"
+
 
 
 # ── Recommendation function ──────────────────────────────────────────────────
