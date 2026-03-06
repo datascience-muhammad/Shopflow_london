@@ -16,7 +16,7 @@ os.environ["MLFLOW_TRACKING_PASSWORD"] = os.environ.get("DAGSHUB_TOKEN")
 mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
 
 # Load model bundle from MLflow registry
-bundle = mlflow.sklearn.load_model("models:/recommendation-model/2")
+bundle = mlflow.sklearn.load_model("models:/recommendation-model/3")
 
 svd              = bundle["svd"]
 customer_factors = bundle["customer_factors"]
