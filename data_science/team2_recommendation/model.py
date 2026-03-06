@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 import datetime
 import os
-import mlflow
 import scipy.sparse as sp
+from pathlib import Path
+
 
 # ── Global variables ──────────────────────────────────────────────────────────
 bundle = None
@@ -18,11 +19,9 @@ def load_bundle():
     global bundle, svd, customer_factors, item_factors
     global customer_index, product_index, products_raw, sparse_matrix
 
-    os.environ["MLFLOW_TRACKING_USERNAME"] = os.environ.get("DAGSHUB_USERNAME")
-    os.environ["MLFLOW_TRACKING_PASSWORD"] = os.environ.get("DAGSHUB_TOKEN")
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI"))
-
-    bundle = mlflow.sklearn.load_model("models:/recommendation-model/3")
+    MODEL_PATH = Path(__file__).parent / "models" / "artifacts" / "rec_model_svd_v1.pkl"
+    with open(MODEL_PATH, "rb") as f:
+        bundle = pickle.load(f)
 
     svd              = bundle["svd"]
     customer_factors = bundle["customer_factors"]
