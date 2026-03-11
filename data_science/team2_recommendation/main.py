@@ -9,10 +9,8 @@ from schemas import RecommendationResponse, RecommendationItem, ErrorResponse
 # ── Lifespan — load model on startup ─────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import threading
     from model import load_bundle
-    thread = threading.Thread(target=load_bundle, daemon=True)
-    thread.start()
+    load_bundle()
     yield
 
 # ── App setup ────────────────────────────────────────────────────────────────

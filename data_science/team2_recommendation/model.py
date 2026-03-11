@@ -3,8 +3,12 @@ import numpy as np
 import pandas as pd
 import datetime
 import scipy.sparse as sp
-from pathlib import Path
+import mlflow
+import mlflow.tracking
+import os
 
+from dotenv import load_dotenv
+load_dotenv()
 
 # ── Global variables ──────────────────────────────────────────────────────────
 bundle           = None
@@ -19,15 +23,59 @@ sparse_matrix    = None
 MODEL_VERSION = "rec-model-svd-v1.0"
 
 
-# ── Load model bundle ─────────────────────────────────────────────────────────
+# ── Load model bundle from Dagshub ────────────────────────────────────────────
 def load_bundle():
     global bundle, svd, customer_factors, item_factors
     global customer_index, product_index, products_raw, sparse_matrix
 
-    MODEL_PATH = Path(__file__).parent / "models" / "artifacts" / "rec_model_svd_v1.pkl"
+    # ── Credentials from environment variables — never hardcoded ─────────────
+    tracking_uri = os.getenv('MLFLOW_TRACKING_URI')
+    username     = os.getenv('MLFLOW_TRACKING_USERNAME')
+    password     = os.getenv('MLFLOW_TRACKING_PASSWORD')
 
+    if not all([tracking_uri, username, password]):
+        raise EnvironmentError(
+            "Missing MLflow credentials. Set MLFLOW_TRACKING_URI, "
+            "MLFLOW_TRACKING_USERNAME and MLFLOW_TRACKING_PASSWORD "
+            "as environment variables."
+        )
+
+    os.environ['MLFLOW_TRACKING_URI']      = tracking_uri
+    os.environ['MLFLOW_TRACKING_USERNAME'] = username
+    os.environ['MLFLOW_TRACKING_PASSWORD'] = password
+
+    mlflow.set_tracking_uri(tracking_uri)
+
+    # ── Download latest svd-tuned-final bundle from Dagshub ───────────────────
+    print("Connecting to Dagshub...")
+    client = mlflow.tracking.MlflowClient()
+
+    experiment = client.get_experiment_by_name("recommendation-engine")
+    if experiment is None:
+        raise ValueError("Experiment 'recommendation-engine' not found on Dagshub.")
+
+    runs = client.search_runs(
+        experiment_ids=[experiment.experiment_id],
+        filter_string="tags.mlflow.runName = 'svd-tuned-final'",
+        order_by=["start_time DESC"],
+        max_results=1
+    )
+
+    if not runs:
+        raise ValueError("No svd-tuned-final run found in experiment.")
+
+    run_id = runs[0].info.run_id
+    print(f"Found run: {run_id}")
+
+    print("Downloading model bundle from Dagshub...")
+    local_path = client.download_artifacts(
+        run_id=run_id,
+        path="bundle/rec_model_svd_v1.pkl"
+    )
+
+    # ── Load bundle ───────────────────────────────────────────────────────────
     print("Loading model bundle...")
-    with open(MODEL_PATH, "rb") as f:
+    with open(local_path, "rb") as f:
         bundle = pickle.load(f)
 
     svd              = bundle["svd"]
@@ -36,7 +84,7 @@ def load_bundle():
     products_raw     = bundle["products_raw"]
     customer_index   = bundle["customer_index"]
     product_index    = bundle["product_index"]
-    sparse_matrix    = bundle["customer_product_matrix"] 
+    sparse_matrix    = bundle["customer_product_matrix"]
 
     print(f"Model loaded successfully ✅")
     print(f"Customers: {len(customer_index)}")
@@ -49,6 +97,9 @@ def get_recommendations(customer_id: str, n: int = 5) -> dict:
     Returns top-n recommendations for a given customer_id.
     Raises KeyError for unknown customers.
     """
+
+    if customer_index is None:
+        raise RuntimeError("Model not loaded. Call load_bundle() first.")
 
     if customer_id not in customer_index:
         raise KeyError(f"Customer '{customer_id}' not found.")
@@ -91,4 +142,3 @@ def get_recommendations(customer_id: str, n: int = 5) -> dict:
         "model_version":   MODEL_VERSION,
         "timestamp":       datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     }
-
