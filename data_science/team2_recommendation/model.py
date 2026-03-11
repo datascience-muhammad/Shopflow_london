@@ -36,9 +36,9 @@ def load_bundle():
     products_raw     = bundle["products_raw"]
     customer_index   = bundle["customer_index"]
     product_index    = bundle["product_index"]
-    sparse_matrix    = bundle["customer_product_matrix"]
+    sparse_matrix    = bundle["customer_product_matrix"] 
 
-    print(f"Model loaded successfully")
+    print(f"Model loaded successfully ✅")
     print(f"Customers: {len(customer_index)}")
     print(f"Products:  {len(product_index)}")
 
