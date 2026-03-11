@@ -2,17 +2,22 @@ import pickle
 import numpy as np
 import pandas as pd
 import datetime
-import os
 import scipy.sparse as sp
 from pathlib import Path
 
 
 # ── Global variables ──────────────────────────────────────────────────────────
-bundle = None
-svd = customer_factors = item_factors = None
-customer_index = product_index = products_raw = sparse_matrix = None
+bundle           = None
+svd              = None
+customer_factors = None
+item_factors     = None
+customer_index   = None
+product_index    = None
+products_raw     = None
+sparse_matrix    = None
 
 MODEL_VERSION = "rec-model-svd-v1.0"
+
 
 # ── Load model bundle ─────────────────────────────────────────────────────────
 def load_bundle():
@@ -20,17 +25,22 @@ def load_bundle():
     global customer_index, product_index, products_raw, sparse_matrix
 
     MODEL_PATH = Path(__file__).parent / "models" / "artifacts" / "rec_model_svd_v1.pkl"
+
+    print("Loading model bundle...")
     with open(MODEL_PATH, "rb") as f:
         bundle = pickle.load(f)
 
     svd              = bundle["svd"]
     customer_factors = bundle["customer_factors"]
     item_factors     = bundle["item_factors"]
+    products_raw     = bundle["products_raw"]
     customer_index   = bundle["customer_index"]
     product_index    = bundle["product_index"]
-    products_raw     = bundle["products_raw"]
     sparse_matrix    = bundle["customer_product_matrix"]
-    print("Model loaded successfully!")
+
+    print(f"Model loaded successfully")
+    print(f"Customers: {len(customer_index)}")
+    print(f"Products:  {len(product_index)}")
 
 
 # ── Recommendation function ───────────────────────────────────────────────────
@@ -54,7 +64,7 @@ def get_recommendations(customer_id: str, n: int = 5) -> dict:
 
     top_indices  = np.argsort(scores)[::-1][:n]
     top_products = [product_index[i] for i in top_indices]
-    top_scores   = scores[top_indices]
+    top_scores   = scores[top_indices].copy()
 
     if top_scores.max() > 0:
         top_scores = top_scores / top_scores.max()
@@ -81,3 +91,4 @@ def get_recommendations(customer_id: str, n: int = 5) -> dict:
         "model_version":   MODEL_VERSION,
         "timestamp":       datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     }
+
