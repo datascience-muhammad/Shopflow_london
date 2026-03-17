@@ -36,7 +36,7 @@ if 'customer_data' not in st.session_state:
 with st.sidebar:
     st.header("📊 Customer Information")
     
-    customer_id = st.text_input("Customer ID", value="12345")
+    customer_id = st.text_input("Customer ID", value="CUST-000001")
     age = st.number_input("Age", min_value=18, max_value=100, value=30)
     gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
     total_spent = st.number_input("Total Spent ($)", min_value=0.0, value=500.0, step=10.0)
